@@ -18,7 +18,7 @@ CL = sqrt(Cd0/(3*K));
 
 CD = Cd0 + K*CL^2;
 
-Range1 = (V/(C_tp*g0))*(CL/CD)*log(1/(1-BFR));
 
+Range1 = (V/(C_tp*g0))*(CL/CD)*log(1/(1-BFR));
 
 end 

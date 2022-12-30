@@ -23,7 +23,37 @@ rho_fuel = 840;   % Fuel Density
 PAX = 290;   % Number of Passengers
 L2gallon = 4.55;   % Litres to gallon conversion rate
 Km2Mile = 0.621;   % Km to Mile conversion rate
+CD0 = 0.0221;
+K = 0.0259;
 
+
+
+Mach_crit = 0.85;
+H_SAR = [0 100 360]'.*30.48;
+W_SAR = [215 195 175]'.*1000.*g;
+
+
+Norm_Op_Empty_W = 0.545;   %OEW/MTOW
+Norm_Max_Struct_Pay = 0.233;   %MSP/MTOW
+Norm_Max_Fuel_Cap = 0.358;   %MFC/MTOW
+Fres = 0.1;   %t all times
+OEW = Norm_Op_Empty_W * Wmtow_N;
+MSP = Norm_Max_Struct_Pay * Wmtow_N;
+MFC = Norm_Max_Fuel_Cap * Wmtow_N;
+MRF = Fres * Wmtow_N;
+
+CL_Max_TO = 2.51;
+CL_Max_LD = 2.73;
+V_NE = 330; %Knots
+Knots_MS_Conversion = 0.51444;
+V_NE_Ms = 330 * Knots_MS_Conversion;
+Thr_Laps_Rate = 0.299; %@FL350 and M = 0.8
+T_AO = 67500; %lb 
+lb_F_Conversion = 0.454;
+T_AO_Kg = T_AO * lb_F_Conversion;
+
+
+Trim_Altitudes = [0:1:15000]';
 
 %====================== Coursework 1 ========================
 
@@ -89,6 +119,31 @@ pmpg = zeros(length(H(:,1)),1);
 
 
 
+Mach_SAR = linspace(0.1, Mach_crit, 4537)';
+SAR_3Alts = zeros(height(Mach_SAR), height(H_SAR));
+SE_3Alts = zeros(height(Mach_SAR), height(H_SAR));
+
+
+BFR = linspace(0,Norm_Max_Fuel_Cap,4537)';
+
+TOW_VarBFR = zeros(height(BFR),1);
+RangeVarMach_km = zeros(height(BFR),1);
+RangeVarCL_km = zeros(height(BFR),1);
+RangeVarH_km = zeros(height(BFR),1);
+
+Range_VH = zeros(height(BFR),1);
+Range_VM = zeros(height(BFR),1);
+Range_VCL = zeros(height(BFR),1);
+
+
+
+VNE_ms = zeros(height(Trim_Altitudes),1);
+VME_ms = zeros(height(Trim_Altitudes),1);
+VstallTO_ms = zeros(height(Trim_Altitudes),1);
+VstallLD_ms = zeros(height(Trim_Altitudes),1);
+VlowTA_ms = zeros(height(Trim_Altitudes),1);
+VhighTA_ms = zeros(height(Trim_Altitudes),1);
+
 %=============== Calculating Atmospheric Properties ==================
 
 
@@ -124,14 +179,13 @@ Time = FlightTime/60;                   %Flight Time in Minutes
 
 figure(1);
 hold on;
-plot(Time,Relative_Pressure, ':', 'LineWidth',1.5);
-plot(Time, Relative_Density, '-.', 'LineWidth',1.0);
-plot(Time,Relative_Temperature, 'b', 'LineWidth',1.0);
-plot(Time, Relative_Measure_Temp, 'c--', 'LineWidth',1.0);
-plot(Time, Mach, 'k', 'LineWidth',1.0);
+plot(Time,Relative_Pressure, ':', 'LineWidth',2);
+plot(Time, Relative_Density, '-.', 'LineWidth',1.5);
+plot(Time,Relative_Temperature, 'b', 'LineWidth',1.5);
+plot(Time, Relative_Measure_Temp, 'c--', 'LineWidth',1.5);
+plot(Time, Mach, 'k', 'LineWidth',1.5);
 xlim([0 310]);
 ylim([0 1.05]);
-grid on;
 legend('ISA Relative Pressure \delta', 'ISA Relative Density \sigma', ...
     'ISA Relative Temperature \theta', 'Relative Measure Temperature \theta_m_e_a_s', ...
     'Mach Number {\it M}');
@@ -139,11 +193,15 @@ legend('Location', 'southoutside');
 xlabel('Flight Time Elapsed {\it t_m_i_n_u_t_e_s}');
 ylabel('Relative Property Value or Mach Number /\theta /\delta /\sigma /{\it M} (-)');
 title('Variation of Relative Atmospheric Properties and Mach Number along Flight Path');
+set(gca,'XMinorTick','on')
+set(gca,'YMinorTick','on')
+set(gca,'LineWidth',1)
+grid(gca,'off')  
+box(gca,'off')
 
 
 figure(2);
 hold on;
-grid on;
 plot(Time,True_AS_PredictedT, 'b', 'LineWidth',1.0);
 plot(Time,True_AS_MeasuredT, 'k', 'LineWidth',1.0); 
 xlim([0 310]);
@@ -152,6 +210,13 @@ legend('TAS Derived From Predicted Static Temperature, {\it TAS_I_S_A}', ...
 legend('Location', 'south');
 title('Comparison of True Airspeed, as calculated based on ISA-Derived Temperature ', ...
     'vs. aircraft-measured static temperature, along Flight Path');
+set(gca,'XMinorTick','on')
+set(gca,'YMinorTick','on')
+set(gca,'TickLength',[0.025 0.025])
+set(gca,'LineWidth',1)
+grid(gca,'off')  
+box(gca,'off')
+axis(gca,'square')
 
 
 
@@ -225,6 +290,8 @@ del_Wf_kg(end+1) = del_Wf_kg(end);
 
 run run_C2_plots.m
 
+%% C.3
+
 
 for i = 1:height(H)-1
 
@@ -246,31 +313,17 @@ plot(Time, SAR, 'k', 'LineWidth',1.0);
 plot(Time, pmpg, 'b--', 'LineWidth',1.0);
 xlim([0 300]);
 ylim([0 200]);
-grid on;
 legend('Specific Air Range {\it SAR (m/kg)} ', 'Passenger MPG, {\it p - mpg} (miles/gal) ')
 xlabel('Flight Time Elapsed {\it t_m_i_n_u_t_e_s}');
 ylabel('Specific Air Range / Passenger Miles per Gallon')
 title('Specific Air Range and Passenger MPG along Flight Path');
-
-
-
-
-%% C.3 Task 3
-
-%Create and array of altitudes weights and mach numbers
-
-
-%assigning constants and variables to calculate from and converting them
-%into the relevant units for the functions
-Mach_crit = 0.85;
-H_SAR = [0 100 360]'.*30.48;
-W_SAR = [215 195 175]'.*1000.*g;
-
-
-%pre allocating vectors to be overwritten in the for loops below
-Mach_SAR = linspace(0.1, Mach_crit, 4537)';
-SAR_3Alts = zeros(height(Mach_SAR), height(H_SAR));
-SE_3Alts = zeros(height(Mach_SAR), height(H_SAR));
+set(gca,'XMinorTick','on')
+set(gca,'YMinorTick','on')
+set(gca,'TickLength',[0.025 0.025])
+set(gca,'LineWidth',1)
+grid(gca,'off')  
+box(gca,'off')
+axis(gca,'square')
 
 
 %embeded for loop calculates SAR and SE for a varying mach number at a set
@@ -307,8 +360,14 @@ legend('SAR @ Sea Level', 'SAR @ 10000ft', 'SAR @ 36000ft')
 xlabel('Mach')
 ylabel('SAR using getSAR-SE Function')
 title('SAR as function of Mach, 3 flight levels, constant W = 195 kgf')
-grid on 
 ylim([0 200])
+set(gca,'XMinorTick','on')
+set(gca,'YMinorTick','on')
+set(gca,'TickLength',[0.025 0.025])
+set(gca,'LineWidth',1)
+grid(gca,'off')  
+box(gca,'off')
+axis(gca,'square')
 
 
 
@@ -318,8 +377,13 @@ legend('SAR @ 215000kgf', 'SAR @ 195000kgf', 'SAR @ 175000kgf')
 xlabel('Mach')
 ylabel('SAR using getSAR-SE Function')
 title('SAR as function of Mach, 1 Flight Level, Varying Weight')
-grid on
-
+set(gca,'XMinorTick','on')
+set(gca,'YMinorTick','on')
+set(gca,'TickLength',[0.025 0.025])
+set(gca,'LineWidth',1)
+grid(gca,'off')  
+box(gca,'off')
+axis(gca,'square')
 
 figure(7)
 plot(Mach_SAR, SE_3Alts, 'LineWidth',1.5);
@@ -327,7 +391,13 @@ legend('SE @ Sea Level', 'SE @ 10000ft', 'SE @ 36000ft')
 xlabel('Mach')
 ylabel('SE using getSAR-SE Function')
 title('SE as function of Mach, 3 Flight Levels, Constant Weight')
-grid on 
+set(gca,'XMinorTick','on')
+set(gca,'YMinorTick','on')
+set(gca,'TickLength',[0.025 0.025])
+set(gca,'LineWidth',1)
+grid(gca,'off')  
+box(gca,'off')
+axis(gca,'square')
 
 
 
@@ -337,29 +407,17 @@ legend('SE @ 215000kgf', 'SE @ 195000kgf', 'SE @ 175000kgf')
 xlabel('Mach')
 ylabel('SE using getSAR-SE Function')
 title('SE as function of Mach, 1 Flight Level, Varying Weight')
-grid on 
+set(gca,'XMinorTick','on')
+set(gca,'YMinorTick','on')
+set(gca,'TickLength',[0.025 0.025])
+set(gca,'LineWidth',1)
+grid(gca,'off')  
+box(gca,'off')
+axis(gca,'square')
+
 
 
 %% C4
-
-% constants given in the task sheet
-
-Norm_Op_Empty_W = 0.545;   %OEW/MTOW
-Norm_Max_Struct_Pay = 0.233;   %MSP/MTOW
-Norm_Max_Fuel_Cap = 0.358;   %MFC/MTOW
-Fres = 0.1;   %t all times
-
-BFR = linspace(0,Norm_Max_Fuel_Cap,4537)';
-
-TOW_VarBFR = zeros(height(BFR),1);
-RangeVarMach_km = zeros(height(BFR),1);
-RangeVarCL_km = zeros(height(BFR),1);
-RangeVarH_km = zeros(height(BFR),1);
-
-Range_VH = zeros(height(BFR),1);
-Range_VM = zeros(height(BFR),1);
-Range_VCL = zeros(height(BFR),1);
-
 for i = 1:height(BFR)
     [Range_VH(i,:)] = get_RangeConstMachConstCL(BFR(i,:));
     [Range_VM(i,:)] = get_RangeConstAltConstCL(BFR(i,:));
@@ -373,7 +431,6 @@ plot(BFR,Range_VH/1000, 'k',  'LineWidth', 1.5);
 plot(BFR,Range_VM/1000, '--b', 'LineWidth', 1.5);
 plot(BFR,Range_VCL/1000, ':', 'LineWidth', 2, 'color', '#EDB120');
 legend('Range Under Variable Altitude Program','Range Under Variable Mach Program', 'Range Under Variable CL Program')
-grid on
 legend('Location', 'northwest')
 xlabel('Block Fuel Ratio \zeta')
 ylabel('Range, (Km)')
@@ -381,7 +438,118 @@ title('Aircraft Rang as a function of Block Fuel Ratio (W = MTOW)')
 yticks([2500 5000 7500 10000 12500 15000])
 set(gca,'XMinorTick','on')
 set(gca,'YMinorTick','on')
+set(gca,'TickLength',[0.025 0.025])
+set(gca,'LineWidth',1)
+grid(gca,'off')  
 axis(gca,'square')
+
+Zeta_MPR = (Wmtow_N - OEW  - MSP)/Wmtow_N;
+Zeta_MER = (MFC)/Wmtow_N;
+Zeta_MFR = (MFC)/(MFC + OEW);
+
+[~, ~, rhos_360, a_360] = AtmosProp(360*30.48);
+V_BR_Cruise = Mach_crit * a_360;
+
+
+CL_MPR = (2/rhos_360) * (Wmtow_N/S) * (1/V_BR_Cruise^2);
+CL_MER =(2/rhos_360) * (Wmtow_N/S) * (1/V_BR_Cruise^2);
+CL_MFR = (2/rhos_360) * ((MFC + OEW)/S) * (1/V_BR_Cruise^2);
+
+CD_MPR = CD0 + K*CL_MPR^2;
+CD_MER = CD0 + K*CL_MER^2;
+CD_MFR = CD0 + K*CL_MFR^2;
+
+
+[~, T_360, ~, a_360] = AtmosProp(360*30.48);
+
+[C_tp_360] = get_TSFC(Mach_crit, T_360/T0);
+
+MPR = (V_BR_Cruise/(C_tp_360*g))*(CL_MPR/CD_MPR)*log(1/(1-Zeta_MPR));
+MER = (V_BR_Cruise/(C_tp_360*g))*(CL_MER/CD_MER)*log(1/(1-Zeta_MER));
+MFR = (V_BR_Cruise/(C_tp_360*g))*(CL_MFR/CD_MFR)*log(1/(1-Zeta_MFR));
+
+
+%================================= Task 4==============================
+BFR_BR = linspace(0,Zeta_MFR,10000)';
+Range_Array = linspace(0,MFR,10000)';
+PAY = zeros(height(Range_Array),1);
+TOW = zeros(height(Range_Array),1);
+FUEL = zeros(height(Range_Array),1); 
+
+
+
+for i = 1:height(Range_Array)
+    if BFR_BR(i,:) <= Zeta_MPR
+        PAY(i,:) = MSP + OEW;
+        TOW(i,:) = (PAY(i,:))/(1-BFR_BR(i,:));
+        FUEL(i,:) = TOW(i,:) - PAY(i,:);
+    elseif BFR_BR(i,:) > Zeta_MPR && BFR_BR(i,:) <= Zeta_MER
+        TOW(i,:) = Wmtow_N;
+        FUEL(i,:) = TOW(i,:) * BFR_BR(i,:);
+        PAY(i,:) = TOW(i,:) - FUEL(i,:);
+    elseif BFR_BR(i,:) > Zeta_MER
+        FUEL(i,:) = MFC;
+        TOW(i,:) = FUEL(i,:)/BFR_BR(i,:);
+        PAY(i,:) = TOW(i,:) - FUEL(i,:);
+    end
+end
+
+
+
+
+figure (10)
+hold on
+plot(Range_Array/(10^3),TOW/g, 'k',  'LineWidth', 1.5, 'color', "#EDB120");
+plot(Range_Array/(10^3),PAY/g,  'LineWidth', 1.5, 'color', "#D95319")
+yline(OEW/g,  'LineWidth', 1.5, 'color', "#0072BD")
+yline(Wmtow_N/g,  'LineWidth', 2, 'LineStyle',':','color','b')
+legend('OEW + PAY + FUEL = TOW', 'OEW + PAY', 'OEW', 'MTOW')
+set(gca,'XMinorTick','on')
+set(gca,'YMinorTick','on')
+set(gca,'TickLength',[0.025 0.025])
+set(gca,'LineWidth',1)
+grid(gca,'off')  
+box(gca,'on')
+axis(gca,'square')
+xline(MER/10^3)
+xline(MPR/10^3)
+xline(MFR/10^3)
+%% Sheet 5
+
+for i = 1:height(Trim_Altitudes)
+    [VNE_ms(i,:), VME_ms(i,:), VstallTO_ms(i,:), VstallLD_ms(i,:)] = get_VNEspeeds(Trim_Altitudes(i,:));
+    [VlowTA_ms(i,:),VhighTA_ms(i,:)] = get_MaxThrustSpeeds(Trim_Altitudes(i,:));
+end
+
+
+figure (11)
+
+set(gcf,'Color',[1,1,1])
+hold on
+plot(VNE_ms,Trim_Altitudes/30.48,'g-','LineWidth',2)
+plot(VME_ms,Trim_Altitudes/30.48,'k-','LineWidth',2)
+plot(VstallTO_ms,Trim_Altitudes/30.48, 'r-','LineWidth',2)
+plot(VstallLD_ms,Trim_Altitudes/30.48,'r--','LineWidth',2)
+plot(VlowTA_ms(1:12300,1),Trim_Altitudes(1:12300,1)/30.48, 'LineWidth', 2, 'Color', 'c')
+plot(VhighTA_ms(1:12300,1),Trim_Altitudes(1:12300,1)/30.48, 'LineWidth', 2, 'Color', 'b')
+legendnames = [{'Never Exceed (Low Alt.)'},{'Never Exceed (High Alt.)'},{'Stall, T/O Config'},{'Stall, L/D Config'},{'Max. Thrust (Low Speed)'},{'Max. Thrust (High Speed) '}]; 
+legend(gca,legendnames,'Interpreter','latex') % instruct Matlab to read late
+set(legend,'Location','NorthWest') % set legend location
+set(gca,'XMinorTick','on')
+set(gca,'YMinorTick','on')
+set(gca,'TickLength',[0.025 0.025])
+set(gca,'LineWidth',1)
+grid(gca,'off')  
+box(gca,'on')
+axis(gca,'square')
+ylim([0 600]);
+title("A330 - 300 Flight Envelope")
+xlabel('True Airspeed, m/s'); % SET X-AXIS LABEL
+ylabel('Altitude, FL');
+
+
+
+
 
 
 

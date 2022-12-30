@@ -1,8 +1,8 @@
 function [CL_trim,CD_trim] = get_TrimCLCD(FlightPathAngle_Deg,W_N,Mach,H)
 
-S = 363.1;
-C_D0 = 0.0221;
-K = 0.0259;
+S = 338.9;
+C_D0 = 0.027;
+K = 0.05;
 gamma = 1.4;
 
  %retrieve atmos properties

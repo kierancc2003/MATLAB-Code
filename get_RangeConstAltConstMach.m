@@ -2,7 +2,7 @@ function [Range3] = get_RangeConstAltConstMach(BFR)
 
 
 Mach = 0.85;
-CD0 = 0.021;
+CD0 = 0.0221;
 K = 0.0259;
 H = 360*30.48;
 g0 = 9.8065;
@@ -20,7 +20,7 @@ gamma = 1.4;
 
 q = 0.5*ps*gamma*Mach^2;
 
-Range3 = (as*Mach/(g0*C_tp))*sqrt(1/(K*CD0))*(atan((Wi/(q*S))*sqrt(K/CD0))-atan(We/(q*S)*sqrt(K/CD0)));
+Range3 = ((as*Mach)/(g0*C_tp)) * sqrt(1/(K*CD0)) * (atan( (Wi/(q*S)) * sqrt(K/CD0))    -    atan((We/(q*S)) * sqrt(K/CD0)));
 
 
 
