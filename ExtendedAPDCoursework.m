@@ -4,7 +4,13 @@ close all;
 
 
 %==================== Section of Constants ======================
- 
+% Constants will need to be changed here and in all used functions depending 
+% on the aircraft being analysed, some constants are assumptions as the 
+%requisite data is not made available by manufacturers, but in the report
+%generated from this code all assumptions and calculations will be made
+%clear
+
+
 gamma = 1.4;   % Ratio of specific heats
 P0 = 101325;   % Sea level pressure
 T0 = 288.15;   % Sea level temperature
@@ -417,7 +423,7 @@ axis(gca,'square')
 
 
 
-%% C4
+%% C4 - calculating block fuel ratios and generating the payload range chart for a given aircraft
 for i = 1:height(BFR)
     [Range_VH(i,:)] = get_RangeConstMachConstCL(BFR(i,:));
     [Range_VM(i,:)] = get_RangeConstAltConstCL(BFR(i,:));
@@ -450,7 +456,7 @@ Zeta_MFR = (MFC)/(MFC + OEW);
 [~, ~, rhos_360, a_360] = AtmosProp(360*30.48);
 V_BR_Cruise = Mach_crit * a_360;
 
-
+% calculating the coefficient of lift and drag for different flight programs
 CL_MPR = (2/rhos_360) * (Wmtow_N/S) * (1/V_BR_Cruise^2);
 CL_MER =(2/rhos_360) * (Wmtow_N/S) * (1/V_BR_Cruise^2);
 CL_MFR = (2/rhos_360) * ((MFC + OEW)/S) * (1/V_BR_Cruise^2);
@@ -463,6 +469,8 @@ CD_MFR = CD0 + K*CL_MFR^2;
 [~, T_360, ~, a_360] = AtmosProp(360*30.48);
 
 [C_tp_360] = get_TSFC(Mach_crit, T_360/T0);
+
+% Calculating the final ranges for each flight program
 
 MPR = (V_BR_Cruise/(C_tp_360*g))*(CL_MPR/CD_MPR)*log(1/(1-Zeta_MPR));
 MER = (V_BR_Cruise/(C_tp_360*g))*(CL_MER/CD_MER)*log(1/(1-Zeta_MER));
@@ -514,7 +522,7 @@ axis(gca,'square')
 xline(MER/10^3)
 xline(MPR/10^3)
 xline(MFR/10^3)
-%% Sheet 5
+%% Sheet 5 - producing a flight envelope for a given aircraft
 
 for i = 1:height(Trim_Altitudes)
     [VNE_ms(i,:), VME_ms(i,:), VstallTO_ms(i,:), VstallLD_ms(i,:)] = get_VNEspeeds(Trim_Altitudes(i,:));
